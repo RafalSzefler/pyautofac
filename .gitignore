@@ -1,0 +1,11 @@
+*.pyc
+*.egg-info
+.pytest_cache
+.DS_Store
+.vscode
+.cache
+.eggs
+.coverage
+__pycache__
+build
+dist
