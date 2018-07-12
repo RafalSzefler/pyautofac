@@ -27,17 +27,17 @@ _PLACEHOLDER = object()
 class Container:
     def __init__(self, mapping):
         self._mapping = mapping
-        self._generated = {}
+        self._generated = {type(self): self}
         self._locks = {key: Lock() for key in self._mapping}
 
     def resolve(self, cls):
-        target = self._mapping.get(cls, _PLACEHOLDER)
-        if target is _PLACEHOLDER:
-            raise Unregistered(cls)
-        
         pregenerated = self._generated.get(cls, _PLACEHOLDER)
         if pregenerated is not _PLACEHOLDER:
             return pregenerated
+
+        target = self._mapping.get(cls, _PLACEHOLDER)
+        if target is _PLACEHOLDER:
+            raise Unregistered(cls)
 
         lock = self._locks.get(cls)
         if lock is None:
