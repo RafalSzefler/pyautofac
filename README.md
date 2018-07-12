@@ -1,9 +1,8 @@
 pyautofac
 =========
 
-Lightweight thread safe container builder inspired by the excelent C#
-library Autofac. The aim of the lib is to simplify dependencies between
-classes.
+Lightweight container builder inspired by the excelent C# library Autofac.
+The aim of the lib is to simplify dependencies between classes.
 
 Requirements
 ============
@@ -54,13 +53,16 @@ automatically:
 from pyautofac import ContainerBuilder
 builder = ContainerBuilder()
 builder.register_instance(Foo(2))
-builder.register_class(Bar)
 builder.register_class(Zoo)
+builder.register_class(Bar)
 container = builder.build()
 zoo = container.resolve(Zoo)
 print(zoo.increment())
 # 5
 ```
+
+Note that the order of `builder.register_class()` calls doesn't matter.
+Dependencies are resolved during `container.resolve()` call.
 
 While it looks like more code it saves lots of time when dealing with
 complicated dependencies.
@@ -70,7 +72,6 @@ More info
 
 By default `pyautofac` instantiates each class passed to `register_class`
 as a singleton.
-
 
 When you use `register_class` then `pyautofac` requires each
 parameter (except `self`) in the constructor to be annotated. Class like this:
@@ -115,3 +116,9 @@ impl = container.resolve(SomeInterface)
 impl.call_me()
 # 1
 ```
+
+Note that `Container` class is itself registered in each `Container` instance.
+
+**Thread safety:** Container is thread safe while builder is not. It is
+advised to use builder during application startup and discard it after
+`.build()` is called.
