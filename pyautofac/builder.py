@@ -28,4 +28,6 @@ class ContainerBuilder:
         return _RegisterProxy(self, inst, type(inst))
 
     def build(self):
-        return Container(self._mapping)
+        container = Container(self._mapping)
+        self._mapping[Container] = container
+        return container
