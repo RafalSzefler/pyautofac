@@ -13,7 +13,7 @@ Python3.5+ (or whichever version that supports annotations)
 Usage
 =====
 
-Assume that we have few dependendt classes:
+Assume that we have few dependent classes:
 
 ```
 class Foo:
@@ -37,7 +37,7 @@ class Zoo:
         return self.bar.square() + 1
 ```
 
-usually we would do something like in order to work with them:
+usually we would do something like this in order to work with them:
 
 ```
 foo = Foo(2)
@@ -62,16 +62,17 @@ print(zoo.increment())
 # 5
 ```
 
-By default `pyautofac` instantiates each class passed to `register_class`
-as a singleton.
-
 While it looks like more code it saves lots of time when dealing with
 complicated dependencies.
 
 More info
 =========
 
-By default when you use `register_class` then `pyautofac` requires each
+By default `pyautofac` instantiates each class passed to `register_class`
+as a singleton.
+
+
+When you use `register_class` then `pyautofac` requires each
 parameter (except `self`) in the constructor to be annotated. Class like this:
 
 ```
