@@ -122,3 +122,36 @@ Note that `Container` class is itself registered in each `Container` instance.
 **Thread safety:** Container is thread safe while builder is not. It is
 advised to use builder during application startup and discard it after
 `.build()` is called.
+
+
+Other utils
+===========
+
+Pyautofac comes with predefined `IConfiguration` interface and
+`ConfigurationBuilder` class. The `IConfiguration` interface is supposed
+to implement a readonly dictionary. Here's an example. First consider a
+`test.json` file
+
+```
+{"foo": "bar"}
+```
+
+and then add it to builder:
+
+```
+config = ConfigurationBuilder()  \
+    .add_json_file("test.json")  \
+    .add_yaml_file(path2, optional=True)  \
+    .add_environment_variables()  \
+    .build()
+
+builder.register_instance(config).as_interface(IConfiguration)
+```
+
+Finally somewhere else retrieve the value:
+
+...
+config = builder.resolve(IConfiguration)
+print(config['foo'])
+# bar
+```
