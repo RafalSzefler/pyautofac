@@ -1,1 +1,10 @@
-{"foo-key": "bar-value"}
+{
+    "foo-key": "bar-value",
+    "Nested": {
+        "Bar": "foo",
+        "Foo": "zoo"
+    },
+    "value": "111",
+    "json": "{\"x\":null}",
+    "time": "123:00:15"
+}
