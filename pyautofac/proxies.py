@@ -14,18 +14,23 @@ class BuilderProxy:
         if not issubclass(self.registered_type, interface):
             raise NotSubclass('[%s] is not a child of [%s]' % (self.registered_type, interface))
         self.interface = interface
+        return self
 
     def as_self(self):
         self.interface = self.registered_type
+        return self
 
     def tag(self, obj):
         self.tag = obj
+        return self
 
     def single_instance(self):
         self.tag = TAG_SINGLE_INSTANCE
+        return self
 
     def per_lifetime(self):
         self.tag = None
+        return self
 
 
 class ClassProxy(BuilderProxy):
