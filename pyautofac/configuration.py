@@ -57,7 +57,19 @@ def parse_datetime(value):
         return datetime.strptime(value, '%Y-%m-%d')
 
 
+_TRUE_VALUES = {'1', 'y', 't', 'true', 'yes'}
+_FALSE_VALUES = {'0', 'n', 'f', 'false', 'no'}
+def parse_bool(data):
+    data = data.lower()
+    if data in _TRUE_VALUES:
+        return True
+    if data in _FALSE_VALUES:
+        return False
+    raise ValueError('Invalid boolean value')
+
+
 _PARSERS = {
+    bool: parse_bool,
     str: lambda value: value,
     int: lambda value: int(value),
     float: lambda value: float(value),
@@ -78,7 +90,9 @@ class DictConfiguration(IConfiguration):
 
     def parse_value(self, key, type=str):
         value = self.get(key)
-        parser = _PARSERS[type]
+        parser = _PARSERS.get(type, _PLACEHOLDER)
+        if parser is _PLACEHOLDER:
+            raise TypeError("Don't know how to parse [%s] type." % type)
         return parser(value)
 
     def __getitem__(self, key):
