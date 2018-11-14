@@ -1,7 +1,7 @@
 import pytest
 
 from pyautofac import ContainerBuilder
-from pyautofac.exceptions import NotInstance, NotSubclass, NotAnnotatedConstructorParam
+from pyautofac.exceptions import NotSubclass, NotAnnotatedConstructorParam, NotRegistered
 
 
 class Foo:
@@ -21,31 +21,30 @@ class Bar(BarInterface):
         return 1
 
 
-def test_container_resolve():
+@pytest.mark.asyncio
+async def test_container_resolve():
     org_foo = Foo()
     builder = ContainerBuilder()
     builder.register_instance(org_foo)
     builder.register_class(Bar).as_interface(BarInterface)
     container = builder.build()
-    bar = container.resolve(BarInterface)
+    bar = await container.resolve(BarInterface)
     assert bar.foo is org_foo
     assert bar.return_1() == 1
 
 
-def test_container_wrong_instance():
+@pytest.mark.asyncio
+async def test_container_wrong_instance():
     builder = ContainerBuilder()
-    builder.register_instance(object()).as_interface(Foo)
-    container = builder.build()
-    with pytest.raises(NotInstance):
-        container.resolve(Foo)
-
-
-def test_container_not_subclass():
-    builder = ContainerBuilder()
-    builder.register_class(str).as_interface(BarInterface)
-    container = builder.build()
     with pytest.raises(NotSubclass):
-        container.resolve(BarInterface)
+        builder.register_instance(object()).as_interface(Foo)
+
+
+@pytest.mark.asyncio
+async def test_container_not_subclass():
+    builder = ContainerBuilder()
+    with pytest.raises(NotSubclass):
+        builder.register_class(str).as_interface(BarInterface)
 
 
 class BrokenConstructor:
@@ -53,9 +52,22 @@ class BrokenConstructor:
         pass
 
 
-def test_broken_constructor():
+@pytest.mark.asyncio
+async def test_broken_constructor():
     builder = ContainerBuilder()
     builder.register_class(BrokenConstructor)
     container = builder.build()
     with pytest.raises(NotAnnotatedConstructorParam):
-        container.resolve(BrokenConstructor)
+        await container.resolve(BrokenConstructor)
+
+
+@pytest.mark.asyncio
+async def test_on_the_fly_instance():
+    org_foo = Foo()
+    builder = ContainerBuilder()
+    builder.register_class(Bar).as_interface(BarInterface)
+    container = builder.build()
+    with pytest.raises(NotRegistered):
+        await container.resolve(BarInterface)
+    container.add_instance(org_foo)
+    await container.resolve(BarInterface)

@@ -1,0 +1,1 @@
+TAG_SINGLE_INSTANCE = object()

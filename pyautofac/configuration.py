@@ -1,5 +1,6 @@
 import os
 import json
+from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 try:
     import ujson
@@ -8,13 +9,16 @@ except ImportError:
 
 
 _PLACEHOLDER = object()
-class IConfiguration:
+class IConfiguration(metaclass=ABCMeta):
+    @abstractmethod
     def get(self, key, default=_PLACEHOLDER):
         raise NotImplementedError()
 
+    @abstractmethod
     def parse_value(self, key, type=str):
         raise NotImplementedError()
 
+    @abstractmethod
     def __getitem__(self, key):
         raise NotImplementedError()
 
@@ -95,6 +99,7 @@ def read_file(path, processor, optional):
         return processor(fo)
 
 
+_NESTING_SEPARATOR = ':'
 def flatten_dict(dct, prefix=[], result={}):
     for key, value in dct.items():
         prefix_copy = prefix[:]
@@ -102,7 +107,7 @@ def flatten_dict(dct, prefix=[], result={}):
         if isinstance(value, dict):
             flatten_dict(value, prefix_copy, result)
         else:
-            new_key = '.'.join(prefix_copy)
+            new_key = _NESTING_SEPARATOR.join(prefix_copy)
             result[new_key] = str(value)
     return result
 
@@ -143,7 +148,7 @@ class ConfigurationBuilder:
         env = os.environ
         keys = list(self._mapping.keys())
         for k in keys:
-            new_key = k.replace('.', _ENV_KEY_SEPARTOR)
+            new_key = k.replace(_NESTING_SEPARATOR, _ENV_KEY_SEPARTOR)
             if prefix is not None:
                 new_key = prefix + _ENV_KEY_SEPARTOR + new_key
             try:

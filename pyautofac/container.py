@@ -1,11 +1,14 @@
 import inspect
+from abc import ABCMeta, abstractmethod
 from threading import Lock
 
 from pyautofac.exceptions import (
-    Unregistered, NotAnnotatedConstructorParam, NotSubclass, NotInstance,
+    AlreadyRegistered, NotRegistered, NotAnnotatedConstructorParam, NotSubclass,
 )
+from pyautofac.async_resource import IAsyncResource
 
-
+get_type = type
+_PLACEHOLDER = object()
 
 def get_constructor_params(cls):
     ctr = cls.__init__
@@ -21,46 +24,117 @@ def get_constructor_params(cls):
             raise NotAnnotatedConstructorParam(p)
         yield ann[p]
 
-_PLACEHOLDER = object()
+
+class IContainer(metaclass=ABCMeta):
+    @abstractmethod
+    def add_instance(self, instance, type=None):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def resolve(self, cls):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def dispose(self, exc=None):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def create_nested(self, tag=None):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def __aenter__(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc, tb):
+        raise NotImplementedError()
 
 
-class Container:
-    def __init__(self, mapping):
-        self._mapping = mapping
-        self._generated = {type(self): self}
-        self._locks = {key: Lock() for key in self._mapping}
+class DummyContainer(IContainer):
+    async def resolve(self, cls):
+        raise NotRegistered()
 
-    def resolve(self, cls):
-        pregenerated = self._generated.get(cls, _PLACEHOLDER)
-        if pregenerated is not _PLACEHOLDER:
-            return pregenerated
+    async def dispose(self, exc=None):
+        raise NotImplementedError()
 
-        target = self._mapping.get(cls, _PLACEHOLDER)
-        if target is _PLACEHOLDER:
-            raise Unregistered(cls)
+    def create_nested(self, tag=None):
+        raise NotImplementedError()
 
-        lock = self._locks.get(cls)
-        if lock is None:
-            return self._generated[cls]
-        with lock:
-            if cls in self._generated:
-                return self._generated[cls]
-            if not inspect.isclass(target):
-                if not isinstance(target, cls):
-                    raise NotInstance()
-                self._generated[cls] = target
-                del self._locks[cls]
-                return target
-            
-            if not (cls == target or issubclass(target, cls)):
-                raise NotSubclass()
+    def add_instance(self, instance, type=None):
+        raise NotImplementedError()
 
-            params_classes = get_constructor_params(target)
-            resolved_params = [
-                self.resolve(param_cls)
-                for param_cls in params_classes
-            ]
-            instance = target(*resolved_params)
-            self._generated[cls] = instance
-            del self._locks[cls]
+    async def __aenter__(self):
+        raise NotImplementedError()
+
+    async def __aexit__(self, exc_type, exc, tb):
+        raise NotImplementedError()
+
+
+class Container(IContainer):
+    def __init__(self, proxy_mapping, parent, tag=None):
+        self._cache = {}
+        self._mapping = proxy_mapping
+        self._parent = parent
+        self._tag = tag
+        self._lock = Lock()
+        self._to_dispose = []
+
+    def create_nested(self, tag=None):
+        return Container(self._mapping, self, tag)
+
+    async def dispose(self, exc=None):
+        for inst in reversed(self._to_dispose):
+            await inst.dispose(exc)
+
+    async def resolve(self, cls):
+        with self._lock:
+            if cls in self._cache:
+                return self._cache[cls]
+
+        proxy = self._mapping.get(cls)
+        if proxy is None:
+            raise NotRegistered()
+
+        instance = getattr(proxy, 'instance', _PLACEHOLDER)
+        if instance is not _PLACEHOLDER:
+            with self._lock:
+                self._cache[cls] = instance
             return instance
+
+        if proxy.tag is not None and proxy.tag is not self._tag:
+            instance = await self._parent.resolve(cls)
+            with self._lock:
+                self._cache[cls] = instance
+            return instance
+
+        type = proxy.registered_type
+        params = get_constructor_params(type)
+        dependencies = []
+        for param in params:
+            dependencies.append(await self.resolve(param))
+        instance = type(*dependencies)
+        if isinstance(instance, IAsyncResource):
+            await instance.initialize()
+            self._to_dispose.append(instance)
+        with self._lock:
+            self._cache[cls] = instance
+        return instance
+
+    def add_instance(self, instance, type=None):
+        if type is None:
+            type = get_type(instance)
+        if not isinstance(instance, type):
+            raise NotSubclass('Object [%s] is not an instance of [%s].' % (instance, type))
+        if type in self._mapping:
+            raise AlreadyRegistered('Interface [%s] already registered.' % type)
+        with self._lock:
+            if type in self._cache:
+                raise AlreadyRegistered('Interface [%s] already registered.' % type)
+            self._cache[type] = instance
+
+    async def __aenter__(self):
+        return self
+
+    def __aexit__(self, exc_type, exc, tb):
+        return self.dispose(exc)

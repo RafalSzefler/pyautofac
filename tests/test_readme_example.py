@@ -1,3 +1,5 @@
+import pytest
+
 from pyautofac import ContainerBuilder
 
 
@@ -29,11 +31,12 @@ def test_direct():
     assert zoo.increment() == 5
 
 
-def test_pyautofac():
+@pytest.mark.asyncio
+async def test_pyautofac():
     builder = ContainerBuilder()
     builder.register_instance(Foo(2))
     builder.register_class(Bar)
     builder.register_class(Zoo)
     container = builder.build()
-    zoo = container.resolve(Zoo)
+    zoo = await container.resolve(Zoo)
     assert zoo.increment() == 5

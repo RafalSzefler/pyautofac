@@ -10,15 +10,11 @@ class NotSubclass(PyautofacException):
     pass
 
 
-class NotInstance(PyautofacException):
-    pass
-
-
 class AlreadyRegistered(PyautofacException):
     pass
 
 
-class Unregistered(PyautofacException):
+class NotRegistered(PyautofacException):
     pass
 
 

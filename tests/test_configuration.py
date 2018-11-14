@@ -36,7 +36,7 @@ def test_configuration_builder_with_env():
             .add_json_file(path)  \
             .add_environment_variables()  \
             .build()
-        assert config['Nested.Bar'] == 'abc'
+        assert config['Nested:Bar'] == 'abc'
 
 
 def test_configuration_builder_with_env_prefix():
@@ -47,7 +47,7 @@ def test_configuration_builder_with_env_prefix():
             .add_environment_variables(prefix='ABC')  \
             .build()
     
-        assert config['Nested.Bar'] == 'abc'
+        assert config['Nested:Bar'] == 'abc'
 
 
 def test_configuration_builder_with_overwritten_env():
