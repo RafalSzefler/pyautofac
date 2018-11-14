@@ -1,12 +1,12 @@
 from inspect import isclass
 
 from pyautofac.exceptions import NotClass, NotSubclass
-from pyautofac.globals import TAG_SINGLE_INSTANCE
+from pyautofac.globals import Tags
 
 
 class BuilderProxy:
     def __init__(self):
-        self.tag = None
+        self.tag = Tags.AlwaysNew
 
     def as_interface(self, interface):
         if not isclass(interface):
@@ -21,15 +21,20 @@ class BuilderProxy:
         return self
 
     def tag(self, obj):
+        assert isinstance(obj, Tags)
         self.tag = obj
         return self
 
     def single_instance(self):
-        self.tag = TAG_SINGLE_INSTANCE
+        self.tag = Tags.SingleInstance
         return self
 
     def per_lifetime(self):
-        self.tag = None
+        self.tag = Tags.Lifetime
+        return self
+
+    def always_new(self):
+        self.tag = Tags.AlwaysNew
         return self
 
 
@@ -46,3 +51,15 @@ class InstanceProxy(BuilderProxy):
         self.instance = instance
         self.registered_type = type(instance)
         self.interface = self.registered_type
+
+    def tag(self, obj):
+        raise NotImplementedError()
+
+    def single_instance(self):
+        raise NotImplementedError()
+
+    def per_lifetime(self):
+        raise NotImplementedError()
+
+    def always_new(self):
+        raise NotImplementedError()

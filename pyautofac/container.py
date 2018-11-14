@@ -1,11 +1,14 @@
 import inspect
+from asyncio import Future
 from abc import ABCMeta, abstractmethod
 from threading import Lock
 
+from pyautofac.async_resource import IAsyncResource
 from pyautofac.exceptions import (
     AlreadyRegistered, NotRegistered, NotAnnotatedConstructorParam, NotSubclass,
 )
-from pyautofac.async_resource import IAsyncResource
+from pyautofac.globals import Tags
+from pyautofac.factory import TypeFactory
 
 get_type = type
 _PLACEHOLDER = object()
@@ -71,8 +74,17 @@ class DummyContainer(IContainer):
         raise NotImplementedError()
 
 
+class FactoryResolver(TypeFactory):
+    def __init__(self, type, container):
+        self.type = type
+        self.container = container
+
+    def __call__(self):
+        return self.container.resolve(self.type)
+
+
 class Container(IContainer):
-    def __init__(self, proxy_mapping, parent, tag=None):
+    def __init__(self, proxy_mapping, parent, tag=Tags.SingleInstance):
         self._cache = {}
         self._mapping = proxy_mapping
         self._parent = parent
@@ -80,8 +92,8 @@ class Container(IContainer):
         self._lock = Lock()
         self._to_dispose = []
 
-    def create_nested(self, tag=None):
-        return Container(self._mapping, self, tag)
+    def create_nested(self):
+        return Container(self._mapping, self, Tags.Lifetime)
 
     async def dispose(self, exc=None):
         for inst in reversed(self._to_dispose):
@@ -102,24 +114,40 @@ class Container(IContainer):
                 self._cache[cls] = instance
             return instance
 
-        if proxy.tag is not None and proxy.tag is not self._tag:
-            instance = await self._parent.resolve(cls)
-            with self._lock:
-                self._cache[cls] = instance
-            return instance
-
         type = proxy.registered_type
         params = get_constructor_params(type)
-        dependencies = []
-        for param in params:
-            dependencies.append(await self.resolve(param))
-        instance = type(*dependencies)
-        if isinstance(instance, IAsyncResource):
-            await instance.initialize()
-            self._to_dispose.append(instance)
+        def resolver_builder(param):
+            if issubclass(param, TypeFactory):
+                def resolver():
+                    fut = Future()
+                    fut.set_result(FactoryResolver(param.SUB_TYPE, self))
+                    return fut
+            else:
+                def resolver():
+                    return self.resolve(param)
+            return resolver
+        resolvers = [resolver_builder(param) for param in params]            
+        async def factory():
+            dependencies = []
+            for resolver in resolvers:
+                dependencies.append(await resolver())
+            instance = type(*dependencies)
+            if isinstance(instance, IAsyncResource):
+                await instance.initialize()
+                self._to_dispose.append(instance)
+            return instance
+
+        if proxy.tag is Tags.AlwaysNew:
+            return await factory()
+
+        if proxy.tag is Tags.SingleInstance and self._tag is not Tags.SingleInstance:
+            return await self._parent.resolve(cls)
+
+        instance = await factory()
         with self._lock:
             self._cache[cls] = instance
         return instance
+
 
     def add_instance(self, instance, type=None):
         if type is None:

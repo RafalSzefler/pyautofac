@@ -45,12 +45,21 @@ async def test_single_instance_from_nested():
 @pytest.mark.asyncio
 async def test_cached():
     builder = ContainerBuilder()
-    builder.register_class(Foo).as_interface(IFoo)
-    builder.register_class(Singleton).single_instance()
+    builder.register_class(Foo).as_interface(IFoo).per_lifetime()
     container = builder.build()
     s1 = await container.resolve(IFoo)
     s2 = await container.resolve(IFoo)
     assert s1 is s2
+
+
+@pytest.mark.asyncio
+async def test_always_new():
+    builder = ContainerBuilder()
+    builder.register_class(Foo).as_interface(IFoo).always_new()
+    container = builder.build()
+    s1 = await container.resolve(IFoo)
+    s2 = await container.resolve(IFoo)
+    assert s1 is not s2
 
 
 @pytest.mark.asyncio

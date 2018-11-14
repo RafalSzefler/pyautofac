@@ -1,6 +1,6 @@
 from pyautofac.container import Container, DummyContainer
 from pyautofac.exceptions import AlreadyRegistered
-from pyautofac.globals import TAG_SINGLE_INSTANCE
+from pyautofac.globals import Tags
 from pyautofac.proxies import ClassProxy, InstanceProxy
 
 
@@ -26,4 +26,4 @@ class ContainerBuilder:
                 raise AlreadyRegistered('Interface [%s] is already registered' % pr.interface)
             mapping[pr.interface] = pr
         parent = DummyContainer()
-        return Container(mapping, parent, tag=TAG_SINGLE_INSTANCE)
+        return Container(mapping, parent)
