@@ -7,6 +7,7 @@ from pyautofac.globals import Tags
 class BuilderProxy:
     def __init__(self):
         self.tag = Tags.AlwaysNew
+        self.overwrite = False
 
     def as_interface(self, interface):
         if not isclass(interface):
@@ -36,6 +37,9 @@ class BuilderProxy:
     def always_new(self):
         self.tag = Tags.AlwaysNew
         return self
+
+    def overwrite(self):
+        self.overwrite = True
 
 
 class ClassProxy(BuilderProxy):

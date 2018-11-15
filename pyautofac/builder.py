@@ -22,7 +22,7 @@ class ContainerBuilder:
     def build(self):
         mapping = {}
         for pr in self._proxies:
-            if pr.interface in mapping:
+            if pr.interface in mapping and not pr.overwrite:
                 raise AlreadyRegistered('Interface [%s] is already registered' % pr.interface)
             mapping[pr.interface] = pr
         parent = DummyContainer()
