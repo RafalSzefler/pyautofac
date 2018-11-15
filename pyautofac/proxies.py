@@ -38,7 +38,7 @@ class BuilderProxy:
         self.tag = Tags.AlwaysNew
         return self
 
-    def overwrite(self):
+    def overwrite_registered(self):
         self.overwrite = True
         return self
 
