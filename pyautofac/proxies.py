@@ -40,6 +40,7 @@ class BuilderProxy:
 
     def overwrite(self):
         self.overwrite = True
+        return self
 
 
 class ClassProxy(BuilderProxy):
