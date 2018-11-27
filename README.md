@@ -56,6 +56,8 @@ builder.register_instance(Foo(2))
 builder.register_class(Zoo)
 builder.register_class(Bar)
 container = builder.build()
+...
+await container.dispose()
 ```
 
 We can now resolve registered classes when in async context:
@@ -68,6 +70,8 @@ print(zoo.increment())
 
 Note that the order of `builder.register_class()` calls doesn't matter.
 Dependencies are resolved during `await container.resolve()` call.
+
+The reason `.resolve` is an async function will be explained later.
 
 While it looks like more code it saves lots of time when dealing with
 complicated dependencies. You typicall use each container as a context manager:
@@ -146,7 +150,7 @@ builder.register_class(ConcreteImplementation).as_interface(SomeInterface)
 and then resolving will work correctly:
 
 ```
-impl = container.resolve(SomeInterface)
+impl = await container.resolve(SomeInterface)
 impl.call_me()
 # 1
 ```
@@ -154,6 +158,29 @@ impl.call_me()
 **Thread safety:** Container is thread safe while builder is not. It is
 advised to use builder during application startup and discard it after
 `.build()` is called.
+
+IAsyncResource
+==============
+
+If a given class implements 
+
+```
+class IAsyncResource(metaclass=ABCMeta):
+    @abstractmethod
+    async def initialize(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def dispose(self, exc=None):
+        raise NotImplementedError()
+```
+
+and you `await container.resolve(MyClass)` then pyautofac will call `initialize()`.
+After that when you `await container.dispose()` (or equivalently when the code leaves
+the `await with` section) pyautofac will call `dispose()` method.
+
+Note that the order of `initialize()` is from the most deepest dependency to current class
+while the order of `dispose()` calls is reversed.
 
 
 Other utils
@@ -182,8 +209,8 @@ builder.register_instance(config).as_interface(IConfiguration)
 
 Finally somewhere else retrieve the value:
 
-...
-config = builder.resolve(IConfiguration)
+```
+config = await container.resolve(IConfiguration)
 print(config['foo'])
 # bar
 ```
