@@ -5,4 +5,4 @@ from pyautofac.configuration import IConfiguration, ConfigurationBuilder
 from pyautofac.factory import Factory
 
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'

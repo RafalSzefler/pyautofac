@@ -3,7 +3,7 @@ import json
 from contextlib import contextmanager
 from datetime import timedelta
 
-from pyautofac import ConfigurationBuilder
+from pyautofac import ConfigurationBuilder, IConfiguration
 
 
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -25,7 +25,7 @@ def test_configuration_builder():
         .add_json_file(path)  \
         .add_json_file('test.json', optional=True)  \
         .build()
-    
+    assert isinstance(config, IConfiguration)
     assert config['foo-key'] == 'bar-value'
 
 
@@ -80,3 +80,22 @@ def test_configuration_builder_parsing():
     assert config.parse_value('value', int) == 111
     assert config.parse_value('json', json) == {'x': None}
     assert config.parse_value('time', timedelta) == timedelta(seconds=15, hours=123)
+
+
+def test_configuration_get_section():
+    path = os.path.join(ROOT, 'config.json')
+    config = ConfigurationBuilder()  \
+        .add_json_file(path)  \
+        .add_json_file('test.json', optional=True)  \
+        .build()
+    section = config.get_section('Nested')
+    assert isinstance(section, IConfiguration)
+    assert section.to_dict() ==  {"Bar": "foo", "Foo": "zoo"}
+
+
+def test_configuration_get_section_nested():
+    config = ConfigurationBuilder()  \
+        .add_dict({'foo': {'bar': {'zoo': 1, 'test': 2}}}) \
+        .build()
+    assert config.get_section('foo:bar').to_dict() == {'zoo': '1', 'test': '2'}
+    assert config.get_section('foo:b').to_dict() == {}

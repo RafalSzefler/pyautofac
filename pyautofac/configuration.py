@@ -1,3 +1,4 @@
+import copy
 import os
 import json
 from abc import ABCMeta, abstractmethod
@@ -94,6 +95,26 @@ class DictConfiguration(IConfiguration):
         if parser is _PLACEHOLDER:
             raise TypeError("Don't know how to parse [%s] type." % type)
         return parser(value)
+
+    def get_section(self, prefix):
+        result = {}
+        for key, value in self._mapping.items():
+            if key.startswith(prefix):
+                key = key[len(prefix):]
+                if not (key != '' and key[0] == _NESTING_SEPARATOR):
+                    continue
+                key = key[1:].split(_NESTING_SEPARATOR)
+                last = key.pop()
+                root = result
+                for subkey in key:
+                    if subkey not in root:
+                        root[subkey] = {}
+                    root = root[subkey]
+                root[last] = value
+        return DictConfiguration(result)
+
+    def to_dict(self):
+        return copy.deepcopy(self._mapping)
 
     def __getitem__(self, key):
         return self._mapping[key]
