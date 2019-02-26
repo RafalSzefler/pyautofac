@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 
 from pyautofac import ContainerBuilder, IAsyncResource
@@ -112,3 +113,22 @@ async def test_async_resource_context_manager2():
         async with container.create_nested() as nested:
             await nested.resolve(Bar)
     assert messages == ['singleton-init', 'bar-init', 'bar-dispose', 'bar-init', 'bar-dispose', 'singleton-dispose']
+
+
+@pytest.mark.asyncio
+async def test_parallel_resolve():
+    messages = []
+    builder = ContainerBuilder()
+    builder.register_instance(messages).as_interface(list)
+    builder.register_class(Singleton).single_instance()
+    builder.register_class(Bar)
+    async with builder.build() as container:
+        async def resolve():
+            async with container.create_nested() as nested:
+                await nested.resolve(Bar)
+        await asyncio.gather(resolve(), resolve(), resolve())
+    assert len(messages) == 8
+    assert messages[0] == 'singleton-init'
+    assert messages[-1] == 'singleton-dispose'
+    assert sum(1 for msg in messages if msg == 'bar-init') == 3
+    assert sum(1 for msg in messages if msg == 'bar-dispose') == 3
