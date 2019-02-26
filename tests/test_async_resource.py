@@ -97,3 +97,18 @@ async def test_async_resource_context_manager():
     async with builder.build() as container:
         await container.resolve(Bar)
     assert messages == ['singleton-init', 'bar-init', 'bar-dispose', 'singleton-dispose']
+
+
+@pytest.mark.asyncio
+async def test_async_resource_context_manager2():
+    messages = []
+    builder = ContainerBuilder()
+    builder.register_instance(messages).as_interface(list)
+    builder.register_class(Singleton).single_instance()
+    builder.register_class(Bar)
+    async with builder.build() as container:
+        async with container.create_nested() as nested:
+            await nested.resolve(Bar)
+        async with container.create_nested() as nested:
+            await nested.resolve(Bar)
+    assert messages == ['singleton-init', 'bar-init', 'bar-dispose', 'bar-init', 'bar-dispose', 'singleton-dispose']
