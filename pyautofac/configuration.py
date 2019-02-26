@@ -85,10 +85,12 @@ class DictConfiguration(IConfiguration):
         self._mapping = mapping
 
     def get(self, key, default=_PLACEHOLDER):
-        value = self._mapping.get(key, _PLACEHOLDER)
-        if value is _PLACEHOLDER:
-            raise KeyError(key)
-        return value
+        try:
+            return self._mapping[key]
+        except KeyError:
+            if default is not _PLACEHOLDER:
+                return default
+            raise
 
     def parse_value(self, key, type=str):
         value = self.get(key)
@@ -154,10 +156,12 @@ class ConfigurationBuilder:
         self._mapping = {}
 
     def get(self, key, default=_PLACEHOLDER):
-        value = self._mapping.get(key, _PLACEHOLDER)
-        if value is _PLACEHOLDER:
-            raise KeyError(key)
-        return value
+        try:
+            return self._mapping[key]
+        except KeyError:
+            if default is not _PLACEHOLDER:
+                return default
+            raise
 
     def add_dict(self, dct):
         if not isinstance(dct, dict):
