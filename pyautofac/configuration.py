@@ -85,7 +85,7 @@ class DictConfiguration(IConfiguration):
         self._mapping = mapping
 
     def get(self, key, default=_PLACEHOLDER):
-        value = self._mapping.get(key)
+        value = self._mapping.get(key, _PLACEHOLDER)
         if value is _PLACEHOLDER:
             raise KeyError(key)
         return value
@@ -154,12 +154,10 @@ class ConfigurationBuilder:
         self._mapping = {}
 
     def get(self, key, default=_PLACEHOLDER):
-        try:
-            return self._mapping[key]
-        except KeyError:
-            if default is not _PLACEHOLDER:
-                return default
-            raise
+        value = self._mapping.get(key, _PLACEHOLDER)
+        if value is _PLACEHOLDER:
+            raise KeyError(key)
+        return value
 
     def add_dict(self, dct):
         if not isinstance(dct, dict):
