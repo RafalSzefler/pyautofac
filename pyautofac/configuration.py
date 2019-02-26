@@ -1,6 +1,7 @@
 import copy
 import os
 import json
+import sys
 from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 try:
@@ -152,6 +153,14 @@ class ConfigurationBuilder:
     def __init__(self):
         self._mapping = {}
 
+    def get(self, key, default=_PLACEHOLDER):
+        try:
+            return self._mapping[key]
+        except KeyError:
+            if default is not _PLACEHOLDER:
+                return default
+            raise
+
     def add_dict(self, dct):
         if not isinstance(dct, dict):
             raise TypeError('dct is not a dict')
@@ -191,6 +200,29 @@ class ConfigurationBuilder:
             except KeyError:
                 continue
             self._mapping[k] = value
+        return self
+
+    def add_command_line(self, args=None):
+        if args is None:
+            args = sys.argv[1:]
+        args = list(reversed(args))
+        result = self._mapping
+        while args:
+            key = args.pop()
+            if not key.startswith('--'):
+                continue
+            key = key[2:]
+            key, sep, value = key.partition('=')
+            if sep:
+                result[key] = value
+                continue
+            if not args:
+                raise ValueError('Invalid command line arguments')
+            value = args.pop()
+            if value.startswith('--'):
+                raise ValueError('Command line value cannot start with [--]')
+            result[key] = value
+        self._mapping.update(result)
         return self
 
     def build(self):

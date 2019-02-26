@@ -99,3 +99,11 @@ def test_configuration_get_section_nested():
         .build()
     assert config.get_section('foo:bar').to_dict() == {'zoo': '1', 'test': '2'}
     assert config.get_section('foo:b').to_dict() == {}
+
+
+def test_command_line():
+    config = ConfigurationBuilder()  \
+        .add_command_line(['--test=11', '--foo', 'bar']) \
+        .build()
+    assert config['test'] == '11'
+    assert config['foo'] == 'bar'
